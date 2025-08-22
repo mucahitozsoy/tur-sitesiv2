@@ -1,0 +1,2049 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Global Seyahat - Yurtdışı Turları</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'brand-dark': '#264c5a',
+                        'brand-blue': '#3baec8',
+                        'brand-white': '#ffffff'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body { 
+            font-family: 'Poppins', sans-serif; 
+            line-height: 1.6;
+            color: #333;
+        }
+        
+        .hero-bg { 
+            background: linear-gradient(135deg, #264c5a 0%, #3baec8 100%); 
+        }
+        
+        .card-hover { 
+            transition: all 0.3s ease; 
+        }
+        
+        .card-hover:hover { 
+            transform: translateY(-5px); 
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1); 
+        }
+        
+        .modal { 
+            display: none; 
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+        }
+        
+        .modal.active { 
+            display: flex; 
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .page { 
+            display: none; 
+        }
+        
+        .page.active { 
+            display: block; 
+        }
+        
+        .admin-panel { 
+            display: none; 
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #f8fafc;
+            z-index: 999;
+        }
+        
+        .admin-panel.active { 
+            display: block; 
+        }
+        
+        .sidebar-item { 
+            transition: all 0.3s ease; 
+            cursor: pointer;
+        }
+        
+        .sidebar-item:hover { 
+            background-color: rgba(59, 174, 200, 0.1); 
+        }
+        
+        .sidebar-item.active { 
+            background-color: #3baec8; 
+            color: white; 
+        }
+        
+        .content-section { 
+            display: none; 
+        }
+        
+        .content-section.active { 
+            display: block; 
+        }
+        
+        .stats-card { 
+            transition: transform 0.3s ease; 
+        }
+        
+        .stats-card:hover { 
+            transform: translateY(-2px); 
+        }
+        
+        .table-row:hover { 
+            background-color: #f8fafc; 
+        }
+        
+        .tab-button {
+            transition: all 0.3s ease;
+        }
+        
+        .tab-button.active {
+            background-color: #3baec8;
+            color: white;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .day-card {
+            transition: all 0.3s ease;
+        }
+        
+        .day-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        
+        /* Mobile responsive fixes */
+        @media (max-width: 768px) {
+            .container {
+                padding-left: 1rem;
+                padding-right: 1rem;
+            }
+            
+            .grid {
+                gap: 1rem;
+            }
+            
+            .text-5xl {
+                font-size: 2.5rem;
+            }
+            
+            .text-3xl {
+                font-size: 1.875rem;
+            }
+        }
+        
+        /* Button styles */
+        button {
+            cursor: pointer;
+            border: none;
+            outline: none;
+        }
+        
+        button:focus {
+            outline: 2px solid #3baec8;
+            outline-offset: 2px;
+        }
+        
+        /* Input styles */
+        input, select, textarea {
+            outline: none;
+        }
+        
+        input:focus, select:focus, textarea:focus {
+            border-color: #3baec8;
+            box-shadow: 0 0 0 3px rgba(59, 174, 200, 0.1);
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+
+<script>
+// Global variables
+let currentPage = 'home';
+let currentAdminSection = 'dashboard';
+let reservations = [];
+
+// Page navigation functions
+function showPage(pageId) {
+    // Hide all pages
+    const pages = document.querySelectorAll('.page');
+    pages.forEach(page => page.classList.remove('active'));
+    
+    // Show selected page
+    const targetPage = document.getElementById(pageId + 'Page');
+    if (targetPage) {
+        targetPage.classList.add('active');
+        currentPage = pageId;
+    }
+    
+    // Scroll to top
+    window.scrollTo(0, 0);
+}
+
+function showCategoryPage(category) {
+    showPage(category);
+}
+
+function showTourDetail(tourId) {
+    showPage(tourId);
+}
+
+// Modal functions
+function openReservationModal(tourName, price) {
+    const modal = document.getElementById('reservationModal');
+    if (!modal) {
+        createReservationModal(tourName, price);
+    } else {
+        // Update modal content
+        document.getElementById('modalTourName').textContent = tourName;
+        document.getElementById('modalTourPrice').textContent = '€' + price;
+        modal.classList.add('active');
+    }
+}
+
+function createReservationModal(tourName, price) {
+    const modalHTML = `
+        <div id="reservationModal" class="modal active fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+                <div class="text-center mb-8">
+                    <h2 class="text-3xl font-bold text-brand-dark mb-2">🎯 Rezervasyon</h2>
+                    <p class="text-gray-600">Tur: <span id="modalTourName" class="font-semibold text-brand-blue">${tourName}</span></p>
+                    <p class="text-gray-600">Fiyat: <span id="modalTourPrice" class="font-semibold text-brand-blue">€${price}</span> / kişi</p>
+                </div>
+                
+                <form id="reservationForm" class="space-y-6">
+                    <div class="grid md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Ad Soyad *</label>
+                            <input type="text" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-blue focus:border-transparent">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">E-posta *</label>
+                            <input type="email" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-blue focus:border-transparent">
+                        </div>
+                    </div>
+                    
+                    <div class="grid md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Telefon *</label>
+                            <input type="tel" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-blue focus:border-transparent">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Kişi Sayısı *</label>
+                            <select required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-blue focus:border-transparent">
+                                <option value="">Seçiniz</option>
+                                <option value="1">1 Kişi</option>
+                                <option value="2">2 Kişi</option>
+                                <option value="3">3 Kişi</option>
+                                <option value="4">4 Kişi</option>
+                                <option value="5+">5+ Kişi</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Özel İstekler</label>
+                        <textarea rows="3" placeholder="Özel isteklerinizi buraya yazabilirsiniz..." class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-blue focus:border-transparent"></textarea>
+                    </div>
+                    
+                    <div class="flex space-x-4">
+                        <button type="button" onclick="closeReservationModal()" class="flex-1 bg-gray-300 text-gray-700 py-3 rounded-lg hover:bg-gray-400 transition duration-300 font-semibold">
+                            İptal
+                        </button>
+                        <button type="submit" class="flex-1 bg-brand-blue text-white py-3 rounded-lg hover:bg-brand-dark transition duration-300 font-semibold">
+                            Rezervasyon Yap
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    
+    // Add form submit handler
+    document.getElementById('reservationForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        handleReservationSubmit(tourName, price);
+    });
+}
+
+function closeReservationModal() {
+    const modal = document.getElementById('reservationModal');
+    if (modal) {
+        modal.classList.remove('active');
+        setTimeout(() => modal.remove(), 300);
+    }
+}
+
+function handleReservationSubmit(tourName, price) {
+    const form = document.getElementById('reservationForm');
+    const formData = new FormData(form);
+    
+    // Generate reservation number
+    const reservationNumber = 'GS-2024-' + Math.random().toString(36).substr(2, 6).toUpperCase();
+    
+    // Show success message
+    alert(`🎉 Rezervasyonunuz başarıyla alındı!\n\nRezervasyon No: ${reservationNumber}\nTur: ${tourName}\n\nEn kısa sürede sizinle iletişime geçeceğiz.`);
+    
+    closeReservationModal();
+}
+
+// Admin functions
+function showAdminLogin() {
+    const modal = document.getElementById('adminLoginModal');
+    modal.classList.add('active');
+}
+
+function closeAdminLogin() {
+    const modal = document.getElementById('adminLoginModal');
+    modal.classList.remove('active');
+}
+
+function adminLogin() {
+    const username = document.getElementById('adminUsername').value;
+    const password = document.getElementById('adminPassword').value;
+    
+    if (username === 'admin' && password === '123456') {
+        closeAdminLogin();
+        showAdminPanel();
+    } else {
+        alert('❌ Hatalı kullanıcı adı veya şifre!');
+    }
+}
+
+function showAdminPanel() {
+    document.getElementById('mainWebsite').style.display = 'none';
+    document.getElementById('adminPanel').classList.add('active');
+}
+
+function backToWebsite() {
+    document.getElementById('adminPanel').classList.remove('active');
+    document.getElementById('mainWebsite').style.display = 'block';
+}
+
+function adminLogout() {
+    if (confirm('Çıkış yapmak istediğinizden emin misiniz?')) {
+        backToWebsite();
+    }
+}
+
+function showAdminSection(sectionId) {
+    // Update sidebar
+    const sidebarItems = document.querySelectorAll('.sidebar-item');
+    sidebarItems.forEach(item => item.classList.remove('active'));
+    event.target.classList.add('active');
+    
+    // Update content
+    const sections = document.querySelectorAll('.content-section');
+    sections.forEach(section => section.classList.remove('active'));
+    
+    const targetSection = document.getElementById('admin' + sectionId.charAt(0).toUpperCase() + sectionId.slice(1));
+    if (targetSection) {
+        targetSection.classList.add('active');
+        currentAdminSection = sectionId;
+    }
+}
+
+// Tab functions for tour details
+function showTab(tabId) {
+    // Update tab buttons
+    const tabButtons = document.querySelectorAll('.tab-button');
+    tabButtons.forEach(button => button.classList.remove('active'));
+    event.target.classList.add('active');
+    
+    // Update tab content
+    const tabContents = document.querySelectorAll('.tab-content');
+    tabContents.forEach(content => content.classList.remove('active'));
+    
+    const targetTab = document.getElementById(tabId);
+    if (targetTab) {
+        targetTab.classList.add('active');
+    }
+}
+
+// Initialize page
+document.addEventListener('DOMContentLoaded', function() {
+    // Set up admin login form
+    const adminLoginForm = document.getElementById('adminLoginForm');
+    if (adminLoginForm) {
+        adminLoginForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            adminLogin();
+        });
+    }
+    
+    // Set up contact form
+    const contactForm = document.querySelector('#contactPage form');
+    if (contactForm) {
+        contactForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            alert('📧 Mesajınız başarıyla gönderildi! En kısa sürede size dönüş yapacağız.');
+            this.reset();
+        });
+    }
+    
+    console.log('🚀 Global Seyahat sistemi başlatıldı!');
+});
+
+// Utility functions
+function formatPrice(price) {
+    return '€' + price.toLocaleString();
+}
+
+function generateReservationNumber() {
+    return 'GS-2024-' + Math.random().toString(36).substr(2, 6).toUpperCase();
+}
+
+// Search functionality
+function searchTours() {
+    const searchTerm = document.querySelector('input[placeholder="Nereye gitmek istiyorsunuz?"]').value;
+    if (searchTerm.trim()) {
+        showPage('tours');
+        // Here you could implement actual search filtering
+        console.log('Searching for:', searchTerm);
+    }
+}
+
+// Mobile menu toggle (if needed)
+function toggleMobileMenu() {
+    const mobileMenu = document.getElementById('mobileMenu');
+    if (mobileMenu) {
+        mobileMenu.classList.toggle('active');
+    }
+}
+</script>
+    <!-- Main Website -->
+    <div id="mainWebsite">
+        <!-- Header -->
+        <header class="bg-white shadow-sm">
+            <div class="container mx-auto px-4">
+                <div class="flex justify-between items-center py-3 border-b border-gray-200">
+                    <div class="flex items-center space-x-4">
+                        <span class="text-sm text-gray-600">📞 +90 212 555 0199</span>
+                        <span class="text-sm text-gray-600">✉️ info@globalseyahat.com</span>
+                        <button onclick="showAdminLogin()" class="text-sm text-gray-600 hover:text-brand-blue transition duration-300">
+                            🔐 Admin
+                        </button>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <span class="text-sm text-gray-600">🌍 Türkçe</span>
+                        <span class="text-sm text-gray-600">💰 EUR</span>
+                    </div>
+                </div>
+                
+                <nav class="flex justify-between items-center py-4">
+                    <div class="flex items-center">
+                        <button onclick="showPage('home')" class="text-2xl font-bold text-brand-dark cursor-pointer hover:text-brand-blue transition duration-300">✈️ Global Seyahat</button>
+                    </div>
+                    <div class="hidden md:flex items-center space-x-8">
+                        <button onclick="showPage('home')" class="text-gray-700 hover:text-brand-blue transition duration-300">Ana Sayfa</button>
+                        <button onclick="showPage('tours')" class="text-gray-700 hover:text-brand-blue transition duration-300">Turlarımız</button>
+                        <button onclick="showPage('about')" class="text-gray-700 hover:text-brand-blue transition duration-300">Hakkımızda</button>
+                        <button onclick="showPage('contact')" class="text-gray-700 hover:text-brand-blue transition duration-300">İletişim</button>
+                        <button onclick="openReservationModal('Genel Rezervasyon', 0)" class="bg-brand-blue text-white px-6 py-2 rounded-full hover:bg-brand-dark transition duration-300">
+                            Rezervasyon
+                        </button>
+                    </div>
+                </nav>
+            </div>
+        </header>
+
+        <!-- Home Page -->
+        <div id="homePage" class="page active">
+            <!-- Hero Section -->
+            <section class="hero-bg text-white py-20">
+                <div class="container mx-auto px-4 text-center">
+                    <h2 class="text-5xl font-bold mb-6">Dünyayı Keşfetmeye Hazır mısınız?</h2>
+                    <p class="text-xl mb-8 opacity-90">Yurtdışı turlarımızla farklı kültürleri keşfedin, unutulmaz anılar biriktirin</p>
+                    <div class="flex flex-col md:flex-row justify-center items-center space-y-4 md:space-y-0 md:space-x-4 max-w-2xl mx-auto">
+                        <input type="text" placeholder="Nereye gitmek istiyorsunuz?" class="w-full md:flex-1 px-6 py-4 rounded-full text-gray-800 focus:outline-none focus:ring-4 focus:ring-white focus:ring-opacity-30">
+                        <button onclick="showPage('tours')" class="w-full md:w-auto bg-white text-brand-blue px-8 py-4 rounded-full font-semibold hover:bg-gray-100 transition duration-300">
+                            🔍 Tur Ara
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Categories Section -->
+            <section class="py-16 bg-white">
+                <div class="container mx-auto px-4">
+                    <div class="text-center mb-12">
+                        <h3 class="text-3xl font-bold text-brand-dark mb-4">Popüler Destinasyonlar</h3>
+                        <p class="text-gray-600 max-w-2xl mx-auto">En sevilen tur kategorilerimizi keşfedin</p>
+                    </div>
+                    
+                    <div class="grid md:grid-cols-3 gap-8">
+                        <div class="card-hover bg-gradient-to-br from-green-400 to-blue-500 text-white p-8 rounded-2xl">
+                            <div class="text-4xl mb-4">🏰</div>
+                            <h4 class="text-2xl font-bold mb-3">Büyük Balkan Turları</h4>
+                            <p class="opacity-90 mb-6">Balkanların büyülü atmosferini keşfedin</p>
+                            <div class="flex justify-between items-center">
+                                <span class="text-2xl font-bold">€450'dan başlayan fiyatlarla</span>
+                                <button onclick="showCategoryPage('balkan')" class="bg-white text-brand-blue px-6 py-2 rounded-full font-semibold hover:bg-gray-100 transition duration-300">
+                                    Detaylar
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="card-hover bg-gradient-to-br from-red-400 to-pink-500 text-white p-8 rounded-2xl">
+                            <div class="text-4xl mb-4">🗼</div>
+                            <h4 class="text-2xl font-bold mb-3">Avrupa Klasikleri</h4>
+                            <p class="opacity-90 mb-6">Paris, Roma, Londra ve daha fazlası</p>
+                            <div class="flex justify-between items-center">
+                                <span class="text-2xl font-bold">€899'dan başlayan fiyatlarla</span>
+                                <button onclick="showCategoryPage('avrupa')" class="bg-white text-brand-blue px-6 py-2 rounded-full font-semibold hover:bg-gray-100 transition duration-300">
+                                    Detaylar
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="card-hover bg-gradient-to-br from-purple-400 to-pink-500 text-white p-8 rounded-2xl">
+                            <div class="text-4xl mb-4">🌸</div>
+                            <h4 class="text-2xl font-bold mb-3">Uzakdoğu Maceraları</h4>
+                            <p class="opacity-90 mb-6">Japonya, Çin, Tayland'ın mistik dünyası</p>
+                            <div class="flex justify-between items-center">
+                                <span class="text-2xl font-bold">€1599'dan başlayan fiyatlarla</span>
+                                <button onclick="showCategoryPage('uzakdogu')" class="bg-white text-brand-blue px-6 py-2 rounded-full font-semibold hover:bg-gray-100 transition duration-300">
+                                    Detaylar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Featured Tours Section -->
+            <section class="py-16 bg-gray-50">
+                <div class="container mx-auto px-4">
+                    <div class="text-center mb-12">
+                        <h3 class="text-3xl font-bold text-brand-dark mb-4">Öne Çıkan Turlar</h3>
+                        <p class="text-gray-600 max-w-2xl mx-auto">En popüler turlarımızı inceleyin</p>
+                    </div>
+                    
+                    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                        <!-- Tour Card 1 -->
+                        <div class="card-hover bg-white rounded-2xl overflow-hidden shadow-lg">
+                            <div class="h-48 bg-gradient-to-br from-green-400 to-blue-500 flex items-center justify-center">
+                                <span class="text-6xl">🏰</span>
+                            </div>
+                            <div class="p-6">
+                                <div class="flex justify-between items-start mb-3">
+                                    <h4 class="text-xl font-bold text-brand-dark">Klasik Balkan Turu</h4>
+                                    <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-semibold">Popüler</span>
+                                </div>
+                                <p class="text-gray-600 mb-4">Belgrad, Saraybosna, Dubrovnik ve Mostar'ı kapsayan muhteşem bir yolculuk</p>
+                                <div class="flex items-center text-sm text-gray-500 mb-4">
+                                    <span class="mr-4">📅 7 Gece 8 Gün</span>
+                                    <span>✈️ Uçak Dahil</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <div>
+                                        <span class="text-2xl font-bold text-brand-blue">€450</span>
+                                        <span class="text-gray-500 text-sm">/kişi</span>
+                                    </div>
+                                    <button onclick="showTourDetail('balkan-klasik')" class="bg-brand-blue text-white px-6 py-2 rounded-full hover:bg-brand-dark transition duration-300">
+                                        Detaylar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tour Card 2 -->
+                        <div class="card-hover bg-white rounded-2xl overflow-hidden shadow-lg">
+                            <div class="h-48 bg-gradient-to-br from-red-400 to-pink-500 flex items-center justify-center">
+                                <span class="text-6xl">🗼</span>
+                            </div>
+                            <div class="p-6">
+                                <div class="flex justify-between items-start mb-3">
+                                    <h4 class="text-xl font-bold text-brand-dark">Paris Romantik Turu</h4>
+                                    <span class="bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm font-semibold">Yeni</span>
+                                </div>
+                                <p class="text-gray-600 mb-4">Aşk şehri Paris'in en romantik köşelerini keşfedin</p>
+                                <div class="flex items-center text-sm text-gray-500 mb-4">
+                                    <span class="mr-4">📅 5 Gece 6 Gün</span>
+                                    <span>✈️ Uçak Dahil</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <div>
+                                        <span class="text-2xl font-bold text-brand-blue">€899</span>
+                                        <span class="text-gray-500 text-sm">/kişi</span>
+                                    </div>
+                                    <button onclick="showTourDetail('paris-romantik')" class="bg-brand-blue text-white px-6 py-2 rounded-full hover:bg-brand-dark transition duration-300">
+                                        Detaylar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tour Card 3 -->
+                        <div class="card-hover bg-white rounded-2xl overflow-hidden shadow-lg">
+                            <div class="h-48 bg-gradient-to-br from-purple-400 to-pink-500 flex items-center justify-center">
+                                <span class="text-6xl">🌸</span>
+                            </div>
+                            <div class="p-6">
+                                <div class="flex justify-between items-start mb-3">
+                                    <h4 class="text-xl font-bold text-brand-dark">Japonya Kültür Turu</h4>
+                                    <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-semibold">Özel</span>
+                                </div>
+                                <p class="text-gray-600 mb-4">Tokyo, Kyoto ve Osaka'da unutulmaz bir kültür deneyimi</p>
+                                <div class="flex items-center text-sm text-gray-500 mb-4">
+                                    <span class="mr-4">📅 10 Gece 11 Gün</span>
+                                    <span>✈️ Uçak Dahil</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <div>
+                                        <span class="text-2xl font-bold text-brand-blue">€1599</span>
+                                        <span class="text-gray-500 text-sm">/kişi</span>
+                                    </div>
+                                    <button onclick="showTourDetail('japonya-kultur')" class="bg-brand-blue text-white px-6 py-2 rounded-full hover:bg-brand-dark transition duration-300">
+                                        Detaylar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Why Choose Us Section -->
+            <section class="py-16 bg-white">
+                <div class="container mx-auto px-4">
+                    <div class="text-center mb-12">
+                        <h3 class="text-3xl font-bold text-brand-dark mb-4">Neden Global Seyahat?</h3>
+                        <p class="text-gray-600 max-w-2xl mx-auto">15 yıllık deneyimimizle size en iyi hizmeti sunuyoruz</p>
+                    </div>
+                    
+                    <div class="grid md:grid-cols-4 gap-8">
+                        <div class="text-center">
+                            <div class="w-16 h-16 bg-brand-blue rounded-full flex items-center justify-center mx-auto mb-4">
+                                <span class="text-2xl">🛡️</span>
+                            </div>
+                            <h4 class="text-xl font-semibold text-brand-dark mb-2">Güvenli Seyahat</h4>
+                            <p class="text-gray-600">TÜRSAB üyesi güvenilir acentemizle güvenle seyahat edin</p>
+                        </div>
+                        
+                        <div class="text-center">
+                            <div class="w-16 h-16 bg-brand-blue rounded-full flex items-center justify-center mx-auto mb-4">
+                                <span class="text-2xl">💰</span>
+                            </div>
+                            <h4 class="text-xl font-semibold text-brand-dark mb-2">En İyi Fiyat</h4>
+                            <p class="text-gray-600">Piyasanın en uygun fiyatları ile kaliteli hizmet garantisi</p>
+                        </div>
+                        
+                        <div class="text-center">
+                            <div class="w-16 h-16 bg-brand-blue rounded-full flex items-center justify-center mx-auto mb-4">
+                                <span class="text-2xl">🎯</span>
+                            </div>
+                            <h4 class="text-xl font-semibold text-brand-dark mb-2">Kişisel Hizmet</h4>
+                            <p class="text-gray-600">Size özel planlanmış turlar ve 7/24 müşteri desteği</p>
+                        </div>
+                        
+                        <div class="text-center">
+                            <div class="w-16 h-16 bg-brand-blue rounded-full flex items-center justify-center mx-auto mb-4">
+                                <span class="text-2xl">⭐</span>
+                            </div>
+                            <h4 class="text-xl font-semibold text-brand-dark mb-2">Deneyim</h4>
+                            <p class="text-gray-600">15 yıllık sektör deneyimi ile 50,000+ mutlu müşteri</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Tour Detail Pages -->
+        <!-- Balkan Klasik Tour Detail -->
+        <div id="balkan-klasikPage" class="page">
+            <section class="bg-gradient-to-br from-green-400 to-blue-500 text-white py-20">
+                <div class="container mx-auto px-4">
+                    <div class="max-w-4xl mx-auto text-center">
+                        <h1 class="text-5xl font-bold mb-6">🏰 Klasik Balkan Turu</h1>
+                        <p class="text-xl mb-8 opacity-90">Belgrad, Saraybosna, Dubrovnik ve Mostar'ı kapsayan muhteşem bir yolculuk</p>
+                        <div class="flex flex-wrap justify-center gap-4 mb-8">
+                            <span class="bg-white bg-opacity-20 px-4 py-2 rounded-full">📅 7 Gece 8 Gün</span>
+                            <span class="bg-white bg-opacity-20 px-4 py-2 rounded-full">✈️ Uçak Dahil</span>
+                            <span class="bg-white bg-opacity-20 px-4 py-2 rounded-full">🏨 4⭐ Oteller</span>
+                            <span class="bg-white bg-opacity-20 px-4 py-2 rounded-full">🍽️ Yarım Pansiyon</span>
+                        </div>
+                        <button onclick="showPage('home')" class="bg-white text-brand-blue px-6 py-3 rounded-full hover:bg-gray-100 transition duration-300 mr-4">
+                            ← Ana Sayfaya Dön
+                        </button>
+                        <button onclick="openReservationModal('Klasik Balkan Turu', 450)" class="bg-brand-blue text-white px-8 py-3 rounded-full hover:bg-brand-dark transition duration-300">
+                            Hemen Rezervasyon Yap
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <section class="py-16 bg-white">
+                <div class="container mx-auto px-4">
+                    <div class="max-w-6xl mx-auto">
+                        <!-- Tab Navigation -->
+                        <div class="flex flex-wrap justify-center mb-8 border-b">
+                            <button onclick="showTab('overview')" class="tab-button active px-6 py-3 font-semibold rounded-t-lg mr-2">
+                                📋 Genel Bilgiler
+                            </button>
+                            <button onclick="showTab('program')" class="tab-button px-6 py-3 font-semibold rounded-t-lg mr-2">
+                                🗓️ Tur Programı
+                            </button>
+                            <button onclick="showTab('pricing')" class="tab-button px-6 py-3 font-semibold rounded-t-lg mr-2">
+                                💰 Fiyatlandırma
+                            </button>
+                            <button onclick="showTab('included')" class="tab-button px-6 py-3 font-semibold rounded-t-lg">
+                                ✅ Dahil Olan Hizmetler
+                            </button>
+                        </div>
+
+                        <!-- Overview Tab -->
+                        <div id="overview" class="tab-content active">
+                            <div class="grid md:grid-cols-2 gap-8">
+                                <div>
+                                    <h3 class="text-2xl font-bold text-brand-dark mb-4">Tur Hakkında</h3>
+                                    <p class="text-gray-600 mb-6">
+                                        Balkanların en güzel şehirlerini keşfedeceğiniz bu eşsiz turda, tarihi Belgrad'dan başlayarak 
+                                        Saraybosna'nın kültürel zenginliklerini, Dubrovnik'in Adriyatik kıyılarındaki güzelliklerini 
+                                        ve Mostar'ın ünlü köprüsünü göreceksiniz.
+                                    </p>
+                                    <div class="space-y-3">
+                                        <div class="flex items-center">
+                                            <span class="text-brand-blue mr-3">📍</span>
+                                            <span><strong>Ziyaret Edilecek Şehirler:</strong> Belgrad, Saraybosna, Dubrovnik, Mostar</span>
+                                        </div>
+                                        <div class="flex items-center">
+                                            <span class="text-brand-blue mr-3">🚌</span>
+                                            <span><strong>Ulaşım:</strong> Konforlu otobüs ve uçak</span>
+                                        </div>
+                                        <div class="flex items-center">
+                                            <span class="text-brand-blue mr-3">👥</span>
+                                            <span><strong>Grup Büyüklüğü:</strong> Maksimum 45 kişi</span>
+                                        </div>
+                                        <div class="flex items-center">
+                                            <span class="text-brand-blue mr-3">🗣️</span>
+                                            <span><strong>Rehber:</strong> Türkçe konuşan profesyonel rehber</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="bg-gradient-to-br from-green-400 to-blue-500 rounded-2xl p-8 text-white">
+                                        <h4 class="text-2xl font-bold mb-4">Öne Çıkan Özellikler</h4>
+                                        <ul class="space-y-3">
+                                            <li class="flex items-center">
+                                                <span class="mr-3">🏰</span>
+                                                Belgrad Kalesi ve Kalemegdan Parkı
+                                            </li>
+                                            <li class="flex items-center">
+                                                <span class="mr-3">🕌</span>
+                                                Saraybosna'da Osmanlı mimarisi
+                                            </li>
+                                            <li class="flex items-center">
+                                                <span class="mr-3">🌊</span>
+                                                Dubrovnik'te Adriyatik manzarası
+                                            </li>
+                                            <li class="flex items-center">
+                                                <span class="mr-3">🌉</span>
+                                                Mostar'ın tarihi köprüsü
+                                            </li>
+                                            <li class="flex items-center">
+                                                <span class="mr-3">🍽️</span>
+                                                Yerel lezzetler ve geleneksel yemekler
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Program Tab -->
+                        <div id="program" class="tab-content">
+                            <h3 class="text-2xl font-bold text-brand-dark mb-8 text-center">7 Gece 8 Günlük Detaylı Program</h3>
+                            <div class="space-y-6">
+                                <!-- Day 1 -->
+                                <div class="day-card bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+                                    <div class="flex items-center mb-4">
+                                        <div class="w-12 h-12 bg-brand-blue rounded-full flex items-center justify-center text-white font-bold mr-4">1</div>
+                                        <div>
+                                            <h4 class="text-xl font-bold text-brand-dark">İstanbul - Belgrad</h4>
+                                            <p class="text-gray-600">Yolculuğun Başlangıcı</p>
+                                        </div>
+                                    </div>
+                                    <div class="grid md:grid-cols-3 gap-4">
+                                        <div class="md:col-span-2">
+                                            <p class="text-gray-600 mb-4">
+                                                Sabah erken saatlerde İstanbul Havalimanı'ndan hareket. Belgrad'a varış ve otel check-in. 
+                                                Öğleden sonra şehir turu: Kalemegdan Kalesi, Knez Mihailova Caddesi ve Skadarlija Bohemian Mahallesi.
+                                            </p>
+                                            <div class="flex flex-wrap gap-2">
+                                                <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">✈️ Uçuş</span>
+                                                <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">🏰 Kale Ziyareti</span>
+                                                <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">🚶 Şehir Turu</span>
+                                            </div>
+                                        </div>
+                                        <div class="bg-gradient-to-br from-blue-400 to-purple-500 rounded-lg p-4 flex items-center justify-center">
+                                            <span class="text-4xl">🏰</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Day 2 -->
+                                <div class="day-card bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+                                    <div class="flex items-center mb-4">
+                                        <div class="w-12 h-12 bg-brand-blue rounded-full flex items-center justify-center text-white font-bold mr-4">2</div>
+                                        <div>
+                                            <h4 class="text-xl font-bold text-brand-dark">Belgrad - Saraybosna</h4>
+                                            <p class="text-gray-600">Bosna Hersek'e Yolculuk</p>
+                                        </div>
+                                    </div>
+                                    <div class="grid md:grid-cols-3 gap-4">
+                                        <div class="md:col-span-2">
+                                            <p class="text-gray-600 mb-4">
+                                                Kahvaltı sonrası Saraybosna'ya hareket. Varış ve şehir turu: Başçarşı (Baščaršija), 
+                                                Gazi Hüsrev Bey Camii, Sebil, Latin Köprüsü ve Sarajevo Tüneli müzesi ziyareti.
+                                            </p>
+                                            <div class="flex flex-wrap gap-2">
+                                                <span class="bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-sm">🚌 Otobüs Yolculuğu</span>
+                                                <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">🕌 Cami Ziyareti</span>
+                                                <span class="bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm">🏛️ Müze</span>
+                                            </div>
+                                        </div>
+                                        <div class="bg-gradient-to-br from-green-400 to-teal-500 rounded-lg p-4 flex items-center justify-center">
+                                            <span class="text-4xl">🕌</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Day 3 -->
+                                <div class="day-card bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+                                    <div class="flex items-center mb-4">
+                                        <div class="w-12 h-12 bg-brand-blue rounded-full flex items-center justify-center text-white font-bold mr-4">3</div>
+                                        <div>
+                                            <h4 class="text-xl font-bold text-brand-dark">Saraybosna - Mostar</h4>
+                                            <p class="text-gray-600">Tarihi Köprü Şehri</p>
+                                        </div>
+                                    </div>
+                                    <div class="grid md:grid-cols-3 gap-4">
+                                        <div class="md:col-span-2">
+                                            <p class="text-gray-600 mb-4">
+                                                Mostar'a hareket. Ünlü Stari Most (Eski Köprü) ziyareti, köprüden atlama gösterisi izleme, 
+                                                Mostar Eski Şehir gezisi ve yerel el sanatları dükkanları ziyareti.
+                                            </p>
+                                            <div class="flex flex-wrap gap-2">
+                                                <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">🌉 Köprü</span>
+                                                <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm">🎭 Gösteri</span>
+                                                <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">🛍️ Alışveriş</span>
+                                            </div>
+                                        </div>
+                                        <div class="bg-gradient-to-br from-yellow-400 to-orange-500 rounded-lg p-4 flex items-center justify-center">
+                                            <span class="text-4xl">🌉</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Day 4 -->
+                                <div class="day-card bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+                                    <div class="flex items-center mb-4">
+                                        <div class="w-12 h-12 bg-brand-blue rounded-full flex items-center justify-center text-white font-bold mr-4">4</div>
+                                        <div>
+                                            <h4 class="text-xl font-bold text-brand-dark">Mostar - Dubrovnik</h4>
+                                            <p class="text-gray-600">Adriyatik İncisi</p>
+                                        </div>
+                                    </div>
+                                    <div class="grid md:grid-cols-3 gap-4">
+                                        <div class="md:col-span-2">
+                                            <p class="text-gray-600 mb-4">
+                                                Dubrovnik'e hareket. Varış ve otel check-in. Akşam serbest zaman, 
+                                                Dubrovnik Eski Şehir'de yürüyüş ve Adriyatik manzarası eşliğinde akşam yemeği.
+                                            </p>
+                                            <div class="flex flex-wrap gap-2">
+                                                <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">🌊 Deniz Manzarası</span>
+                                                <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">🏰 Eski Şehir</span>
+                                                <span class="bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm">🍽️ Akşam Yemeği</span>
+                                            </div>
+                                        </div>
+                                        <div class="bg-gradient-to-br from-blue-400 to-cyan-500 rounded-lg p-4 flex items-center justify-center">
+                                            <span class="text-4xl">🌊</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Continue with remaining days... -->
+                                <div class="text-center mt-8">
+                                    <p class="text-gray-600 mb-4">Kalan günlerde Dubrovnik şehir surları, Lokrum Adası, serbest zaman ve dönüş yolculuğu...</p>
+                                    <button onclick="openReservationModal('Klasik Balkan Turu', 450)" class="bg-brand-blue text-white px-8 py-3 rounded-full hover:bg-brand-dark transition duration-300">
+                                        Detaylı Programı Görmek İçin Rezervasyon Yapın
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Pricing Tab -->
+                        <div id="pricing" class="tab-content">
+                            <h3 class="text-2xl font-bold text-brand-dark mb-8 text-center">Fiyatlandırma Seçenekleri</h3>
+                            <div class="grid md:grid-cols-3 gap-6">
+                                <!-- Adult Pricing -->
+                                <div class="bg-white border-2 border-brand-blue rounded-xl p-6 shadow-lg">
+                                    <div class="text-center mb-6">
+                                        <div class="w-16 h-16 bg-brand-blue rounded-full flex items-center justify-center mx-auto mb-4">
+                                            <span class="text-2xl text-white">👤</span>
+                                        </div>
+                                        <h4 class="text-xl font-bold text-brand-dark">Yetişkin (12+ yaş)</h4>
+                                    </div>
+                                    <div class="space-y-4">
+                                        <div class="flex justify-between items-center">
+                                            <span>Çift Kişilik Odada</span>
+                                            <span class="font-bold text-brand-blue">€450</span>
+                                        </div>
+                                        <div class="flex justify-between items-center">
+                                            <span>Tek Kişilik Odada</span>
+                                            <span class="font-bold text-brand-blue">€580</span>
+                                        </div>
+                                        <div class="flex justify-between items-center">
+                                            <span>3 Kişilik Odada</span>
+                                            <span class="font-bold text-brand-blue">€420</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Child Pricing -->
+                                <div class="bg-white border-2 border-green-500 rounded-xl p-6 shadow-lg">
+                                    <div class="text-center mb-6">
+                                        <div class="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                                            <span class="text-2xl text-white">👶</span>
+                                        </div>
+                                        <h4 class="text-xl font-bold text-brand-dark">Çocuk (6-11 yaş)</h4>
+                                    </div>
+                                    <div class="space-y-4">
+                                        <div class="flex justify-between items-center">
+                                            <span>Anne-Baba ile Aynı Odada</span>
+                                            <span class="font-bold text-green-600">€320</span>
+                                        </div>
+                                        <div class="flex justify-between items-center">
+                                            <span>Ekstra Yatak ile</span>
+                                            <span class="font-bold text-green-600">€380</span>
+                                        </div>
+                                        <div class="text-center">
+                                            <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">%30 İndirim</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Infant Pricing -->
+                                <div class="bg-white border-2 border-yellow-500 rounded-xl p-6 shadow-lg">
+                                    <div class="text-center mb-6">
+                                        <div class="w-16 h-16 bg-yellow-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                                            <span class="text-2xl text-white">🍼</span>
+                                        </div>
+                                        <h4 class="text-xl font-bold text-brand-dark">Bebek (0-5 yaş)</h4>
+                                    </div>
+                                    <div class="space-y-4">
+                                        <div class="flex justify-between items-center">
+                                            <span>Anne-Baba ile Aynı Odada</span>
+                                            <span class="font-bold text-yellow-600">€150</span>
+                                        </div>
+                                        <div class="flex justify-between items-center">
+                                            <span>Sadece Hava Yolu Vergisi</span>
+                                            <span class="text-sm text-gray-600">Yemek Dahil Değil</span>
+                                        </div>
+                                        <div class="text-center">
+                                            <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm">Özel Fiyat</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Payment Options -->
+                            <div class="mt-12 bg-gray-50 rounded-xl p-8">
+                                <h4 class="text-xl font-bold text-brand-dark mb-6 text-center">Ödeme Seçenekleri</h4>
+                                <div class="grid md:grid-cols-2 gap-6">
+                                    <div class="bg-white rounded-lg p-6">
+                                        <h5 class="font-bold text-brand-dark mb-3">💳 Peşin Ödeme</h5>
+                                        <p class="text-gray-600 mb-3">Tüm tutarı peşin ödeyin ve %5 indirim kazanın</p>
+                                        <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">%5 İndirim</span>
+                                    </div>
+                                    <div class="bg-white rounded-lg p-6">
+                                        <h5 class="font-bold text-brand-dark mb-3">📅 Taksitli Ödeme</h5>
+                                        <p class="text-gray-600 mb-3">%50 kapora, kalan tutar tur tarihinden 30 gün önce</p>
+                                        <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">Esnek Ödeme</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Included Services Tab -->
+                        <div id="included" class="tab-content">
+                            <div class="grid md:grid-cols-2 gap-8">
+                                <!-- Included -->
+                                <div class="bg-green-50 rounded-xl p-6">
+                                    <h4 class="text-xl font-bold text-green-800 mb-6 flex items-center">
+                                        <span class="mr-3">✅</span>
+                                        Fiyata Dahil Olan Hizmetler
+                                    </h4>
+                                    <ul class="space-y-3">
+                                        <li class="flex items-center">
+                                            <span class="text-green-600 mr-3">✈️</span>
+                                            İstanbul-Belgrad-İstanbul uçak bileti (ekonomi sınıf)
+                                        </li>
+                                        <li class="flex items-center">
+                                            <span class="text-green-600 mr-3">🏨</span>
+                                            7 gece 4⭐ otel konaklaması (çift kişilik odada)
+                                        </li>
+                                        <li class="flex items-center">
+                                            <span class="text-green-600 mr-3">🍽️</span>
+                                            7 kahvaltı + 7 akşam yemeği (yarım pansiyon)
+                                        </li>
+                                        <li class="flex items-center">
+                                            <span class="text-green-600 mr-3">🚌</span>
+                                            Tüm şehirlerarası ulaşım (konforlu otobüs)
+                                        </li>
+                                        <li class="flex items-center">
+                                            <span class="text-green-600 mr-3">🗣️</span>
+                                            Türkçe konuşan profesyonel rehber
+                                        </li>
+                                        <li class="flex items-center">
+                                            <span class="text-green-600 mr-3">🎫</span>
+                                            Programdaki müze ve ören yeri giriş ücretleri
+                                        </li>
+                                        <li class="flex items-center">
+                                            <span class="text-green-600 mr-3">🛡️</span>
+                                            Seyahat sağlık sigortası
+                                        </li>
+                                        <li class="flex items-center">
+                                            <span class="text-green-600 mr-3">💼</span>
+                                            Havalimanı transfer hizmetleri
+                                        </li>
+                                    </ul>
+                                </div>
+
+                                <!-- Not Included -->
+                                <div class="bg-red-50 rounded-xl p-6">
+                                    <h4 class="text-xl font-bold text-red-800 mb-6 flex items-center">
+                                        <span class="mr-3">❌</span>
+                                        Fiyata Dahil Olmayan Hizmetler
+                                    </h4>
+                                    <ul class="space-y-3">
+                                        <li class="flex items-center">
+                                            <span class="text-red-600 mr-3">🍷</span>
+                                            Yemeklerde içecekler
+                                        </li>
+                                        <li class="flex items-center">
+                                            <span class="text-red-600 mr-3">🥪</span>
+                                            Öğle yemekleri
+                                        </li>
+                                        <li class="flex items-center">
+                                            <span class="text-red-600 mr-3">🛍️</span>
+                                            Kişisel harcamalar ve alışveriş
+                                        </li>
+                                        <li class="flex items-center">
+                                            <span class="text-red-600 mr-3">💰</span>
+                                            Rehber ve şoför bahşişleri
+                                        </li>
+                                        <li class="flex items-center">
+                                            <span class="text-red-600 mr-3">📱</span>
+                                            Telefon, internet ve minibar kullanımı
+                                        </li>
+                                        <li class="flex items-center">
+                                            <span class="text-red-600 mr-3">🧳</span>
+                                            Fazla bagaj ücretleri
+                                        </li>
+                                        <li class="flex items-center">
+                                            <span class="text-red-600 mr-3">🎭</span>
+                                            Opsiyonel turlar ve aktiviteler
+                                        </li>
+                                        <li class="flex items-center">
+                                            <span class="text-red-600 mr-3">🏥</span>
+                                            Sağlık raporu ve PCR test ücretleri
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <!-- Important Notes -->
+                            <div class="mt-8 bg-yellow-50 rounded-xl p-6">
+                                <h4 class="text-xl font-bold text-yellow-800 mb-4 flex items-center">
+                                    <span class="mr-3">⚠️</span>
+                                    Önemli Notlar
+                                </h4>
+                                <ul class="space-y-2 text-gray-700">
+                                    <li>• Minimum 20 kişi ile tur gerçekleşir</li>
+                                    <li>• Pasaport geçerlilik süresi en az 6 ay olmalıdır</li>
+                                    <li>• Schengen vizesi gereklidir</li>
+                                    <li>• Tur programı hava durumu ve yerel koşullara göre değişebilir</li>
+                                    <li>• Otel değişiklik hakkı saklıdır (aynı kategori)</li>
+                                    <li>• İptal koşulları rezervasyon sırasında bildirilir</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Paris Romantik Tour Detail -->
+        <div id="paris-romantikPage" class="page">
+            <section class="bg-gradient-to-br from-red-400 to-pink-500 text-white py-20">
+                <div class="container mx-auto px-4">
+                    <div class="max-w-4xl mx-auto text-center">
+                        <h1 class="text-5xl font-bold mb-6">🗼 Paris Romantik Turu</h1>
+                        <p class="text-xl mb-8 opacity-90">Aşk şehri Paris'in en romantik köşelerini keşfedin</p>
+                        <div class="flex flex-wrap justify-center gap-4 mb-8">
+                            <span class="bg-white bg-opacity-20 px-4 py-2 rounded-full">📅 5 Gece 6 Gün</span>
+                            <span class="bg-white bg-opacity-20 px-4 py-2 rounded-full">✈️ Uçak Dahil</span>
+                            <span class="bg-white bg-opacity-20 px-4 py-2 rounded-full">🏨 4⭐ Oteller</span>
+                            <span class="bg-white bg-opacity-20 px-4 py-2 rounded-full">🍽️ Kahvaltı Dahil</span>
+                        </div>
+                        <button onclick="showPage('home')" class="bg-white text-brand-blue px-6 py-3 rounded-full hover:bg-gray-100 transition duration-300 mr-4">
+                            ← Ana Sayfaya Dön
+                        </button>
+                        <button onclick="openReservationModal('Paris Romantik Turu', 899)" class="bg-brand-blue text-white px-8 py-3 rounded-full hover:bg-brand-dark transition duration-300">
+                            Hemen Rezervasyon Yap
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <section class="py-16 bg-white">
+                <div class="container mx-auto px-4">
+                    <div class="max-w-4xl mx-auto text-center">
+                        <h3 class="text-2xl font-bold text-brand-dark mb-4">Paris'in Büyüsüne Kapılın</h3>
+                        <p class="text-gray-600 mb-8">
+                            Eiffel Kulesi'nin ışıltısından Louvre'un sanat hazinelerine, Seine Nehri'nin romantik 
+                            kıyılarından Montmartre'ın bohemyen atmosferine kadar Paris'in tüm güzelliklerini keşfedin.
+                        </p>
+                        
+                        <div class="grid md:grid-cols-2 gap-8 mb-8">
+                            <div class="bg-gradient-to-br from-red-400 to-pink-500 rounded-2xl p-6 text-white">
+                                <h4 class="text-xl font-bold mb-4">🗼 Ziyaret Edilecek Yerler</h4>
+                                <ul class="text-left space-y-2">
+                                    <li>• Eiffel Kulesi ve Trocadéro</li>
+                                    <li>• Louvre Müzesi ve Mona Lisa</li>
+                                    <li>• Notre Dame Katedrali</li>
+                                    <li>• Champs-Élysées ve Arc de Triomphe</li>
+                                    <li>• Montmartre ve Sacré-Cœur</li>
+                                    <li>• Seine Nehri Tekne Turu</li>
+                                </ul>
+                            </div>
+                            
+                            <div class="bg-gray-50 rounded-2xl p-6">
+                                <h4 class="text-xl font-bold text-brand-dark mb-4">💰 Fiyatlandırma</h4>
+                                <div class="space-y-3">
+                                    <div class="flex justify-between">
+                                        <span>Çift Kişilik Odada:</span>
+                                        <span class="font-bold text-brand-blue">€899</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span>Tek Kişilik Odada:</span>
+                                        <span class="font-bold text-brand-blue">€1,150</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span>Çocuk (6-11 yaş):</span>
+                                        <span class="font-bold text-green-600">€650</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <button onclick="openReservationModal('Paris Romantik Turu', 899)" class="bg-brand-blue text-white px-8 py-3 rounded-full hover:bg-brand-dark transition duration-300">
+                            Detaylı Bilgi ve Rezervasyon
+                        </button>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Japonya Kultur Tour Detail -->
+        <div id="japonya-kulturPage" class="page">
+            <section class="bg-gradient-to-br from-purple-400 to-pink-500 text-white py-20">
+                <div class="container mx-auto px-4">
+                    <div class="max-w-4xl mx-auto text-center">
+                        <h1 class="text-5xl font-bold mb-6">🌸 Japonya Kültür Turu</h1>
+                        <p class="text-xl mb-8 opacity-90">Tokyo, Kyoto ve Osaka'da unutulmaz bir kültür deneyimi</p>
+                        <div class="flex flex-wrap justify-center gap-4 mb-8">
+                            <span class="bg-white bg-opacity-20 px-4 py-2 rounded-full">📅 10 Gece 11 Gün</span>
+                            <span class="bg-white bg-opacity-20 px-4 py-2 rounded-full">✈️ Uçak Dahil</span>
+                            <span class="bg-white bg-opacity-20 px-4 py-2 rounded-full">🏨 4⭐ Oteller</span>
+                            <span class="bg-white bg-opacity-20 px-4 py-2 rounded-full">🍽️ Kahvaltı Dahil</span>
+                        </div>
+                        <button onclick="showPage('home')" class="bg-white text-brand-blue px-6 py-3 rounded-full hover:bg-gray-100 transition duration-300 mr-4">
+                            ← Ana Sayfaya Dön
+                        </button>
+                        <button onclick="openReservationModal('Japonya Kültür Turu', 1599)" class="bg-brand-blue text-white px-8 py-3 rounded-full hover:bg-brand-dark transition duration-300">
+                            Hemen Rezervasyon Yap
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <section class="py-16 bg-white">
+                <div class="container mx-auto px-4">
+                    <div class="max-w-4xl mx-auto text-center">
+                        <h3 class="text-2xl font-bold text-brand-dark mb-4">Uzakdoğu'nun Mistik Dünyası</h3>
+                        <p class="text-gray-600 mb-8">
+                            Geleneksel Japon kültürü ile modern teknolojinin mükemmel uyumunu keşfedin. 
+                            Tapınaklar, bahçeler, sumo güreşi ve sushi deneyimi sizi bekliyor.
+                        </p>
+                        
+                        <div class="grid md:grid-cols-2 gap-8 mb-8">
+                            <div class="bg-gradient-to-br from-purple-400 to-pink-500 rounded-2xl p-6 text-white">
+                                <h4 class="text-xl font-bold mb-4">🏯 Öne Çıkan Deneyimler</h4>
+                                <ul class="text-left space-y-2">
+                                    <li>• Tokyo'da Geleneksel Çay Töreni</li>
+                                    <li>• Kyoto'da Altın Pavilyon</li>
+                                    <li>• Osaka'da Sokak Lezzetleri</li>
+                                    <li>• Fuji Dağı Manzarası</li>
+                                    <li>• Geleneksel Ryokan Konaklama</li>
+                                    <li>• Sumo Güreşi Gösterisi</li>
+                                </ul>
+                            </div>
+                            
+                            <div class="bg-gray-50 rounded-2xl p-6">
+                                <h4 class="text-xl font-bold text-brand-dark mb-4">💰 Fiyatlandırma</h4>
+                                <div class="space-y-3">
+                                    <div class="flex justify-between">
+                                        <span>Çift Kişilik Odada:</span>
+                                        <span class="font-bold text-brand-blue">€1,599</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span>Tek Kişilik Odada:</span>
+                                        <span class="font-bold text-brand-blue">€1,950</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span>Çocuk (6-11 yaş):</span>
+                                        <span class="font-bold text-green-600">€1,200</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <button onclick="openReservationModal('Japonya Kültür Turu', 1599)" class="bg-brand-blue text-white px-8 py-3 rounded-full hover:bg-brand-dark transition duration-300">
+                            Detaylı Bilgi ve Rezervasyon
+                        </button>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Balkan Tours Page -->
+        <div id="balkanPage" class="page">
+            <section class="bg-gradient-to-br from-green-400 to-blue-500 text-white py-20">
+                <div class="container mx-auto px-4 text-center">
+                    <h2 class="text-5xl font-bold mb-6">🏰 Balkan Turları</h2>
+                    <p class="text-xl mb-8 opacity-90">Balkanların büyülü atmosferini keşfedin</p>
+                    <button onclick="showPage('home')" class="bg-white text-brand-blue px-6 py-3 rounded-full hover:bg-gray-100 transition duration-300">
+                        ← Ana Sayfaya Dön
+                    </button>
+                </div>
+            </section>
+
+            <section class="py-16 bg-gray-50">
+                <div class="container mx-auto px-4">
+                    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                        <!-- Balkan Tour 1 -->
+                        <div class="card-hover bg-white rounded-2xl overflow-hidden shadow-lg">
+                            <div class="h-48 bg-gradient-to-br from-green-400 to-blue-500 flex items-center justify-center">
+                                <span class="text-6xl">🏰</span>
+                            </div>
+                            <div class="p-6">
+                                <h4 class="text-xl font-bold text-brand-dark mb-3">Klasik Balkan Turu</h4>
+                                <p class="text-gray-600 mb-4">Belgrad, Saraybosna, Dubrovnik ve Mostar'ı kapsayan muhteşem bir yolculuk</p>
+                                <div class="flex items-center text-sm text-gray-500 mb-4">
+                                    <span class="mr-4">📅 7 Gece 8 Gün</span>
+                                    <span>✈️ Uçak Dahil</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <div>
+                                        <span class="text-2xl font-bold text-brand-blue">€450</span>
+                                        <span class="text-gray-500 text-sm">/kişi</span>
+                                    </div>
+                                    <button onclick="showTourDetail('balkan-klasik')" class="bg-brand-blue text-white px-6 py-2 rounded-full hover:bg-brand-dark transition duration-300">
+                                        Detaylar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Balkan Tour 2 -->
+                        <div class="card-hover bg-white rounded-2xl overflow-hidden shadow-lg">
+                            <div class="h-48 bg-gradient-to-br from-blue-400 to-green-500 flex items-center justify-center">
+                                <span class="text-6xl">🌉</span>
+                            </div>
+                            <div class="p-6">
+                                <h4 class="text-xl font-bold text-brand-dark mb-3">Büyük Balkan Turu</h4>
+                                <p class="text-gray-600 mb-4">Tüm Balkan ülkelerini kapsayan kapsamlı tur</p>
+                                <div class="flex items-center text-sm text-gray-500 mb-4">
+                                    <span class="mr-4">📅 12 Gece 13 Gün</span>
+                                    <span>✈️ Uçak Dahil</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <div>
+                                        <span class="text-2xl font-bold text-brand-blue">€750</span>
+                                        <span class="text-gray-500 text-sm">/kişi</span>
+                                    </div>
+                                    <button onclick="openReservationModal('Büyük Balkan Turu', 750)" class="bg-brand-blue text-white px-6 py-2 rounded-full hover:bg-brand-dark transition duration-300">
+                                        Rezervasyon
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Balkan Tour 3 -->
+                        <div class="card-hover bg-white rounded-2xl overflow-hidden shadow-lg">
+                            <div class="h-48 bg-gradient-to-br from-teal-400 to-blue-500 flex items-center justify-center">
+                                <span class="text-6xl">⛰️</span>
+                            </div>
+                            <div class="p-6">
+                                <h4 class="text-xl font-bold text-brand-dark mb-3">Balkan Doğa Turu</h4>
+                                <p class="text-gray-600 mb-4">Plitvice Gölleri ve doğal güzellikler</p>
+                                <div class="flex items-center text-sm text-gray-500 mb-4">
+                                    <span class="mr-4">📅 6 Gece 7 Gün</span>
+                                    <span>✈️ Uçak Dahil</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <div>
+                                        <span class="text-2xl font-bold text-brand-blue">€520</span>
+                                        <span class="text-gray-500 text-sm">/kişi</span>
+                                    </div>
+                                    <button onclick="openReservationModal('Balkan Doğa Turu', 520)" class="bg-brand-blue text-white px-6 py-2 rounded-full hover:bg-brand-dark transition duration-300">
+                                        Rezervasyon
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Europe Tours Page -->
+        <div id="avrupaPage" class="page">
+            <section class="bg-gradient-to-br from-red-400 to-pink-500 text-white py-20">
+                <div class="container mx-auto px-4 text-center">
+                    <h2 class="text-5xl font-bold mb-6">🗼 Avrupa Turları</h2>
+                    <p class="text-xl mb-8 opacity-90">Avrupa'nın en güzel şehirlerini keşfedin</p>
+                    <button onclick="showPage('home')" class="bg-white text-brand-blue px-6 py-3 rounded-full hover:bg-gray-100 transition duration-300">
+                        ← Ana Sayfaya Dön
+                    </button>
+                </div>
+            </section>
+
+            <section class="py-16 bg-gray-50">
+                <div class="container mx-auto px-4">
+                    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                        <!-- Europe Tour 1 -->
+                        <div class="card-hover bg-white rounded-2xl overflow-hidden shadow-lg">
+                            <div class="h-48 bg-gradient-to-br from-red-400 to-pink-500 flex items-center justify-center">
+                                <span class="text-6xl">🗼</span>
+                            </div>
+                            <div class="p-6">
+                                <h4 class="text-xl font-bold text-brand-dark mb-3">Paris Romantik Turu</h4>
+                                <p class="text-gray-600 mb-4">Aşk şehri Paris'in en romantik köşelerini keşfedin</p>
+                                <div class="flex items-center text-sm text-gray-500 mb-4">
+                                    <span class="mr-4">📅 5 Gece 6 Gün</span>
+                                    <span>✈️ Uçak Dahil</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <div>
+                                        <span class="text-2xl font-bold text-brand-blue">€899</span>
+                                        <span class="text-gray-500 text-sm">/kişi</span>
+                                    </div>
+                                    <button onclick="showTourDetail('paris-romantik')" class="bg-brand-blue text-white px-6 py-2 rounded-full hover:bg-brand-dark transition duration-300">
+                                        Detaylar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Europe Tour 2 -->
+                        <div class="card-hover bg-white rounded-2xl overflow-hidden shadow-lg">
+                            <div class="h-48 bg-gradient-to-br from-yellow-400 to-red-500 flex items-center justify-center">
+                                <span class="text-6xl">🏛️</span>
+                            </div>
+                            <div class="p-6">
+                                <h4 class="text-xl font-bold text-brand-dark mb-3">Roma Tarihi Turu</h4>
+                                <p class="text-gray-600 mb-4">Antik Roma'nın izlerini takip edin</p>
+                                <div class="flex items-center text-sm text-gray-500 mb-4">
+                                    <span class="mr-4">📅 4 Gece 5 Gün</span>
+                                    <span>✈️ Uçak Dahil</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <div>
+                                        <span class="text-2xl font-bold text-brand-blue">€750</span>
+                                        <span class="text-gray-500 text-sm">/kişi</span>
+                                    </div>
+                                    <button onclick="openReservationModal('Roma Tarihi Turu', 750)" class="bg-brand-blue text-white px-6 py-2 rounded-full hover:bg-brand-dark transition duration-300">
+                                        Rezervasyon
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Europe Tour 3 -->
+                        <div class="card-hover bg-white rounded-2xl overflow-hidden shadow-lg">
+                            <div class="h-48 bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center">
+                                <span class="text-6xl">🎭</span>
+                            </div>
+                            <div class="p-6">
+                                <h4 class="text-xl font-bold text-brand-dark mb-3">Londra Kültür Turu</h4>
+                                <p class="text-gray-600 mb-4">Kraliyet şehri Londra'nın kültürel zenginlikleri</p>
+                                <div class="flex items-center text-sm text-gray-500 mb-4">
+                                    <span class="mr-4">📅 6 Gece 7 Gün</span>
+                                    <span>✈️ Uçak Dahil</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <div>
+                                        <span class="text-2xl font-bold text-brand-blue">€950</span>
+                                        <span class="text-gray-500 text-sm">/kişi</span>
+                                    </div>
+                                    <button onclick="openReservationModal('Londra Kültür Turu', 950)" class="bg-brand-blue text-white px-6 py-2 rounded-full hover:bg-brand-dark transition duration-300">
+                                        Rezervasyon
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Far East Tours Page -->
+        <div id="uzakdoguPage" class="page">
+            <section class="bg-gradient-to-br from-purple-400 to-pink-500 text-white py-20">
+                <div class="container mx-auto px-4 text-center">
+                    <h2 class="text-5xl font-bold mb-6">🌸 Uzakdoğu Turları</h2>
+                    <p class="text-xl mb-8 opacity-90">Mistik Asya'nın büyüsüne kapılın</p>
+                    <button onclick="showPage('home')" class="bg-white text-brand-blue px-6 py-3 rounded-full hover:bg-gray-100 transition duration-300">
+                        ← Ana Sayfaya Dön
+                    </button>
+                </div>
+            </section>
+
+            <section class="py-16 bg-gray-50">
+                <div class="container mx-auto px-4">
+                    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                        <!-- Far East Tour 1 -->
+                        <div class="card-hover bg-white rounded-2xl overflow-hidden shadow-lg">
+                            <div class="h-48 bg-gradient-to-br from-purple-400 to-pink-500 flex items-center justify-center">
+                                <span class="text-6xl">🌸</span>
+                            </div>
+                            <div class="p-6">
+                                <h4 class="text-xl font-bold text-brand-dark mb-3">Japonya Kültür Turu</h4>
+                                <p class="text-gray-600 mb-4">Tokyo, Kyoto ve Osaka'da unutulmaz bir kültür deneyimi</p>
+                                <div class="flex items-center text-sm text-gray-500 mb-4">
+                                    <span class="mr-4">📅 10 Gece 11 Gün</span>
+                                    <span>✈️ Uçak Dahil</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <div>
+                                        <span class="text-2xl font-bold text-brand-blue">€1599</span>
+                                        <span class="text-gray-500 text-sm">/kişi</span>
+                                    </div>
+                                    <button onclick="showTourDetail('japonya-kultur')" class="bg-brand-blue text-white px-6 py-2 rounded-full hover:bg-brand-dark transition duration-300">
+                                        Detaylar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Far East Tour 2 -->
+                        <div class="card-hover bg-white rounded-2xl overflow-hidden shadow-lg">
+                            <div class="h-48 bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center">
+                                <span class="text-6xl">🏮</span>
+                            </div>
+                            <div class="p-6">
+                                <h4 class="text-xl font-bold text-brand-dark mb-3">Çin Büyük Duvar Turu</h4>
+                                <p class="text-gray-600 mb-4">Pekin, Şangay ve Büyük Duvar keşfi</p>
+                                <div class="flex items-center text-sm text-gray-500 mb-4">
+                                    <span class="mr-4">📅 8 Gece 9 Gün</span>
+                                    <span>✈️ Uçak Dahil</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <div>
+                                        <span class="text-2xl font-bold text-brand-blue">€1299</span>
+                                        <span class="text-gray-500 text-sm">/kişi</span>
+                                    </div>
+                                    <button onclick="openReservationModal('Çin Büyük Duvar Turu', 1299)" class="bg-brand-blue text-white px-6 py-2 rounded-full hover:bg-brand-dark transition duration-300">
+                                        Rezervasyon
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Far East Tour 3 -->
+                        <div class="card-hover bg-white rounded-2xl overflow-hidden shadow-lg">
+                            <div class="h-48 bg-gradient-to-br from-green-400 to-teal-500 flex items-center justify-center">
+                                <span class="text-6xl">🏝️</span>
+                            </div>
+                            <div class="p-6">
+                                <h4 class="text-xl font-bold text-brand-dark mb-3">Tayland Cennet Turu</h4>
+                                <p class="text-gray-600 mb-4">Bangkok, Phuket ve tropik adalar</p>
+                                <div class="flex items-center text-sm text-gray-500 mb-4">
+                                    <span class="mr-4">📅 9 Gece 10 Gün</span>
+                                    <span>✈️ Uçak Dahil</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <div>
+                                        <span class="text-2xl font-bold text-brand-blue">€1150</span>
+                                        <span class="text-gray-500 text-sm">/kişi</span>
+                                    </div>
+                                    <button onclick="openReservationModal('Tayland Cennet Turu', 1150)" class="bg-brand-blue text-white px-6 py-2 rounded-full hover:bg-brand-dark transition duration-300">
+                                        Rezervasyon
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- All Tours Page -->
+        <div id="toursPage" class="page">
+            <section class="bg-brand-dark text-white py-20">
+                <div class="container mx-auto px-4 text-center">
+                    <h2 class="text-5xl font-bold mb-6">Tüm Turlarımız</h2>
+                    <p class="text-xl mb-8 opacity-90">Size en uygun turu bulun</p>
+                    <button onclick="showPage('home')" class="bg-brand-blue text-white px-6 py-3 rounded-full hover:bg-white hover:text-brand-blue transition duration-300">
+                        ← Ana Sayfaya Dön
+                    </button>
+                </div>
+            </section>
+
+            <section class="py-16 bg-gray-50">
+                <div class="container mx-auto px-4">
+                    <div class="flex flex-wrap gap-4 mb-8 justify-center">
+                        <button onclick="showCategoryPage('balkan')" class="bg-green-500 text-white px-6 py-3 rounded-full hover:bg-green-600 transition duration-300">
+                            🏰 Balkan Turları
+                        </button>
+                        <button onclick="showCategoryPage('avrupa')" class="bg-red-500 text-white px-6 py-3 rounded-full hover:bg-red-600 transition duration-300">
+                            🗼 Avrupa Turları
+                        </button>
+                        <button onclick="showCategoryPage('uzakdogu')" class="bg-purple-500 text-white px-6 py-3 rounded-full hover:bg-purple-600 transition duration-300">
+                            🌸 Uzakdoğu Turları
+                        </button>
+                    </div>
+
+                    <div class="text-center">
+                        <p class="text-gray-600 text-lg">Yukarıdaki kategorilerden birini seçerek turları görüntüleyebilirsiniz.</p>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- About Page -->
+        <div id="aboutPage" class="page">
+            <section class="bg-brand-dark text-white py-20">
+                <div class="container mx-auto px-4 text-center">
+                    <h2 class="text-5xl font-bold mb-6">Hakkımızda</h2>
+                    <p class="text-xl mb-8 opacity-90">15 yıllık deneyimimizle güvenilir seyahat partneri</p>
+                    <button onclick="showPage('home')" class="bg-brand-blue text-white px-6 py-3 rounded-full hover:bg-white hover:text-brand-blue transition duration-300">
+                        ← Ana Sayfaya Dön
+                    </button>
+                </div>
+            </section>
+
+            <section class="py-16 bg-white">
+                <div class="container mx-auto px-4">
+                    <div class="max-w-4xl mx-auto text-center">
+                        <h3 class="text-3xl font-bold text-brand-dark mb-8">Global Seyahat Hikayesi</h3>
+                        <p class="text-lg text-gray-600 mb-8">
+                            2009 yılında kurulan Global Seyahat, 15 yıllık deneyimi ile Türkiye'nin önde gelen seyahat acentelerinden biridir. 
+                            50,000'den fazla mutlu müşterimizle birlikte dünyayı keşfetmeye devam ediyoruz.
+                        </p>
+                        
+                        <div class="grid md:grid-cols-3 gap-8 mt-12">
+                            <div class="text-center">
+                                <div class="text-4xl mb-4">🏆</div>
+                                <h4 class="text-xl font-semibold text-brand-dark mb-2">TÜRSAB Üyesi</h4>
+                                <p class="text-gray-600">Güvenilir ve lisanslı seyahat acentesi</p>
+                            </div>
+                            <div class="text-center">
+                                <div class="text-4xl mb-4">👥</div>
+                                <h4 class="text-xl font-semibold text-brand-dark mb-2">50,000+ Müşteri</h4>
+                                <p class="text-gray-600">Memnun müşterilerimizle büyüyoruz</p>
+                            </div>
+                            <div class="text-center">
+                                <div class="text-4xl mb-4">🌍</div>
+                                <h4 class="text-xl font-semibold text-brand-dark mb-2">50+ Destinasyon</h4>
+                                <p class="text-gray-600">Dünyanın her köşesine seyahat imkanı</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Contact Page -->
+        <div id="contactPage" class="page">
+            <section class="bg-brand-dark text-white py-20">
+                <div class="container mx-auto px-4 text-center">
+                    <h2 class="text-5xl font-bold mb-6">İletişim</h2>
+                    <p class="text-xl mb-8 opacity-90">Bizimle iletişime geçin</p>
+                    <button onclick="showPage('home')" class="bg-brand-blue text-white px-6 py-3 rounded-full hover:bg-white hover:text-brand-blue transition duration-300">
+                        ← Ana Sayfaya Dön
+                    </button>
+                </div>
+            </section>
+
+            <section class="py-16 bg-white">
+                <div class="container mx-auto px-4">
+                    <div class="grid md:grid-cols-2 gap-12">
+                        <div>
+                            <h3 class="text-2xl font-bold text-brand-dark mb-6">İletişim Bilgileri</h3>
+                            <div class="space-y-4">
+                                <div class="flex items-center">
+                                    <span class="text-2xl mr-4">📍</span>
+                                    <div>
+                                        <p class="font-semibold">Adres</p>
+                                        <p class="text-gray-600">Levent Mah. Büyükdere Cad. No:185 Şişli/İstanbul</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center">
+                                    <span class="text-2xl mr-4">📞</span>
+                                    <div>
+                                        <p class="font-semibold">Telefon</p>
+                                        <p class="text-gray-600">+90 212 555 0199</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center">
+                                    <span class="text-2xl mr-4">✉️</span>
+                                    <div>
+                                        <p class="font-semibold">E-posta</p>
+                                        <p class="text-gray-600">info@globalseyahat.com</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center">
+                                    <span class="text-2xl mr-4">🕒</span>
+                                    <div>
+                                        <p class="font-semibold">Çalışma Saatleri</p>
+                                        <p class="text-gray-600">Pazartesi - Cumartesi: 09:00 - 18:00</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <h3 class="text-2xl font-bold text-brand-dark mb-6">Bize Yazın</h3>
+                            <form class="space-y-4">
+                                <div>
+                                    <input type="text" placeholder="Adınız Soyadınız" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-blue focus:border-transparent">
+                                </div>
+                                <div>
+                                    <input type="email" placeholder="E-posta Adresiniz" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-blue focus:border-transparent">
+                                </div>
+                                <div>
+                                    <input type="tel" placeholder="Telefon Numaranız" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-blue focus:border-transparent">
+                                </div>
+                                <div>
+                                    <textarea rows="5" placeholder="Mesajınız" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-blue focus:border-transparent"></textarea>
+                                </div>
+                                <button type="submit" class="w-full bg-brand-blue text-white py-3 rounded-lg hover:bg-brand-dark transition duration-300">
+                                    Mesaj Gönder
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Footer -->
+        <footer class="bg-brand-dark text-white py-12">
+            <div class="container mx-auto px-4">
+                <div class="grid md:grid-cols-4 gap-8">
+                    <div>
+                        <h4 class="text-xl font-bold mb-4">✈️ Global Seyahat</h4>
+                        <p class="text-gray-300 mb-4">Dünyayı keşfetmenin en güvenli ve keyifli yolu</p>
+                        <div class="flex space-x-4">
+                            <span class="w-8 h-8 bg-brand-blue rounded-full flex items-center justify-center cursor-pointer hover:bg-white hover:text-brand-blue transition duration-300">f</span>
+                            <span class="w-8 h-8 bg-brand-blue rounded-full flex items-center justify-center cursor-pointer hover:bg-white hover:text-brand-blue transition duration-300">t</span>
+                            <span class="w-8 h-8 bg-brand-blue rounded-full flex items-center justify-center cursor-pointer hover:bg-white hover:text-brand-blue transition duration-300">i</span>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h5 class="font-semibold mb-4">Hızlı Linkler</h5>
+                        <ul class="space-y-2 text-gray-300">
+                            <li><button onclick="showPage('home')" class="hover:text-white transition duration-300">Ana Sayfa</button></li>
+                            <li><button onclick="showPage('tours')" class="hover:text-white transition duration-300">Turlarımız</button></li>
+                            <li><button onclick="showPage('about')" class="hover:text-white transition duration-300">Hakkımızda</button></li>
+                            <li><button onclick="showPage('contact')" class="hover:text-white transition duration-300">İletişim</button></li>
+                        </ul>
+                    </div>
+                    
+                    <div>
+                        <h5 class="font-semibold mb-4">Popüler Turlar</h5>
+                        <ul class="space-y-2 text-gray-300">
+                            <li><button onclick="showCategoryPage('balkan')" class="hover:text-white transition duration-300">Balkan Turları</button></li>
+                            <li><button onclick="showCategoryPage('avrupa')" class="hover:text-white transition duration-300">Avrupa Turları</button></li>
+                            <li><button onclick="showCategoryPage('uzakdogu')" class="hover:text-white transition duration-300">Uzakdoğu Turları</button></li>
+                        </ul>
+                    </div>
+                    
+                    <div>
+                        <h5 class="font-semibold mb-4">İletişim</h5>
+                        <div class="space-y-2 text-gray-300">
+                            <p>📍 Levent Mah. Büyükdere Cad. No:185</p>
+                            <p>📞 +90 212 555 0199</p>
+                            <p>✉️ info@globalseyahat.com</p>
+                            <p>🕒 Pazartesi - Cumartesi: 09:00 - 18:00</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="border-t border-gray-600 mt-8 pt-8 text-center text-gray-300">
+                    <p>&copy; 2024 Global Seyahat. Tüm hakları saklıdır. | TÜRSAB Üyesi</p>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Admin Login Modal -->
+    <div id="adminLoginModal" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md mx-4">
+            <div class="text-center mb-8">
+                <h2 class="text-2xl font-bold text-brand-dark mb-2">🔐 Admin Girişi</h2>
+                <p class="text-gray-600">Yönetim paneline erişim</p>
+            </div>
+            
+            <form id="adminLoginForm" class="space-y-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Kullanıcı Adı</label>
+                    <input type="text" id="adminUsername" value="admin" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-blue focus:border-transparent">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Şifre</label>
+                    <input type="password" id="adminPassword" value="123456" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-blue focus:border-transparent">
+                </div>
+                <div class="flex space-x-4">
+                    <button type="button" onclick="closeAdminLogin()" class="flex-1 bg-gray-300 text-gray-700 py-3 rounded-lg hover:bg-gray-400 transition duration-300 font-semibold">
+                        İptal
+                    </button>
+                    <button type="submit" class="flex-1 bg-brand-blue text-white py-3 rounded-lg hover:bg-brand-dark transition duration-300 font-semibold">
+                        Giriş Yap
+                    </button>
+                </div>
+            </form>
+            
+            <div class="mt-6 p-4 bg-blue-50 rounded-lg">
+                <p class="text-sm text-blue-800">
+                    <strong>Demo Giriş:</strong><br>
+                    Kullanıcı: admin | Şifre: 123456
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Panel -->
+    <div id="adminPanel" class="admin-panel">
+        <!-- Header -->
+        <header class="bg-white shadow-sm border-b border-gray-200">
+            <div class="flex items-center justify-between px-6 py-4">
+                <div class="flex items-center">
+                    <h1 class="text-2xl font-bold text-brand-dark">✈️ Global Seyahat Admin</h1>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <div class="flex items-center text-sm text-gray-600">
+                        <span class="mr-2">👤</span>
+                        <span>Admin Kullanıcısı</span>
+                    </div>
+                    <button onclick="backToWebsite()" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition duration-300">
+                        Ana Siteye Dön
+                    </button>
+                    <button onclick="adminLogout()" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition duration-300">
+                        Çıkış Yap
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <div class="flex">
+            <!-- Sidebar -->
+            <aside class="w-64 bg-white shadow-sm min-h-screen">
+                <nav class="p-4">
+                    <ul class="space-y-2">
+                        <li>
+                            <button onclick="showAdminSection('dashboard')" class="sidebar-item active w-full text-left px-4 py-3 rounded-lg flex items-center">
+                                <span class="mr-3">📊</span>
+                                Dashboard
+                            </button>
+                        </li>
+                        <li>
+                            <button onclick="showAdminSection('tours')" class="sidebar-item w-full text-left px-4 py-3 rounded-lg flex items-center">
+                                <span class="mr-3">🗺️</span>
+                                Turlar
+                            </button>
+                        </li>
+                        <li>
+                            <button onclick="showAdminSection('reservations')" class="sidebar-item w-full text-left px-4 py-3 rounded-lg flex items-center">
+                                <span class="mr-3">📋</span>
+                                Rezervasyonlar
+                            </button>
+                        </li>
+                        <li>
+                            <button onclick="showAdminSection('customers')" class="sidebar-item w-full text-left px-4 py-3 rounded-lg flex items-center">
+                                <span class="mr-3">👥</span>
+                                Müşteriler
+                            </button>
+                        </li>
+                    </ul>
+                </nav>
+            </aside>
+
+            <!-- Main Content -->
+            <main class="flex-1 p-6">
+                <!-- Dashboard Section -->
+                <div id="adminDashboard" class="content-section active">
+                    <div class="mb-8">
+                        <h2 class="text-3xl font-bold text-brand-dark mb-2">Dashboard</h2>
+                        <p class="text-gray-600">Genel sistem durumu ve istatistikler</p>
+                    </div>
+
+                    <!-- Stats Cards -->
+                    <div class="grid md:grid-cols-4 gap-6 mb-8">
+                        <div class="stats-card bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm text-gray-600">Toplam Tur</p>
+                                    <p class="text-3xl font-bold text-brand-blue">24</p>
+                                </div>
+                                <div class="text-4xl">🗺️</div>
+                            </div>
+                        </div>
+                        <div class="stats-card bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm text-gray-600">Aktif Rezervasyon</p>
+                                    <p class="text-3xl font-bold text-green-600">156</p>
+                                </div>
+                                <div class="text-4xl">📋</div>
+                            </div>
+                        </div>
+                        <div class="stats-card bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm text-gray-600">Bu Ay Gelir</p>
+                                    <p class="text-3xl font-bold text-yellow-600">€45,230</p>
+                                </div>
+                                <div class="text-4xl">💰</div>
+                            </div>
+                        </div>
+                        <div class="stats-card bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm text-gray-600">Toplam Müşteri</p>
+                                    <p class="text-3xl font-bold text-purple-600">1,247</p>
+                                </div>
+                                <div class="text-4xl">👥</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Activity -->
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                            <h3 class="text-xl font-semibold text-brand-dark mb-4">Son Rezervasyonlar</h3>
+                            <div class="space-y-4">
+                                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                    <div>
+                                        <p class="font-medium">Ahmet Yılmaz</p>
+                                        <p class="text-sm text-gray-600">Klasik Balkan Turu</p>
+                                    </div>
+                                    <span class="text-green-600 font-semibold">€450</span>
+                                </div>
+                                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                    <div>
+                                        <p class="font-medium">Fatma Kaya</p>
+                                        <p class="text-sm text-gray-600">Paris Romantik Turu</p>
+                                    </div>
+                                    <span class="text-green-600 font-semibold">€899</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                            <h3 class="text-xl font-semibold text-brand-dark mb-4">Popüler Turlar</h3>
+                            <div class="space-y-4">
+                                <div class="flex items-center justify-between">
+                                    <span>Klasik Balkan Turu</span>
+                                    <div class="flex items-center">
+                                        <div class="w-24 bg-gray-200 rounded-full h-2 mr-3">
+                                            <div class="bg-brand-blue h-2 rounded-full" style="width: 85%"></div>
+                                        </div>
+                                        <span class="text-sm text-gray-600">85%</span>
+                                    </div>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <span>Paris Romantik Turu</span>
+                                    <div class="flex items-center">
+                                        <div class="w-24 bg-gray-200 rounded-full h-2 mr-3">
+                                            <div class="bg-brand-blue h-2 rounded-full" style="width: 72%"></div>
+                                        </div>
+                                        <span class="text-sm text-gray-600">72%</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tours Section -->
+                <div id="adminTours" class="content-section">
+                    <div class="flex justify-between items-center mb-8">
+                        <div>
+                            <h2 class="text-3xl font-bold text-brand-dark mb-2">Turlar</h2>
+                            <p class="text-gray-600">Tüm turları yönetin</p>
+                        </div>
+                        <button class="bg-brand-blue text-white px-6 py-3 rounded-lg hover:bg-brand-dark transition duration-300 font-semibold">
+                            + Yeni Tur Ekle
+                        </button>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                        <table class="w-full">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-4 text-left text-sm font-semibold text-gray-600">Tur Adı</th>
+                                    <th class="px-6 py-4 text-left text-sm font-semibold text-gray-600">Kategori</th>
+                                    <th class="px-6 py-4 text-left text-sm font-semibold text-gray-600">Fiyat</th>
+                                    <th class="px-6 py-4 text-left text-sm font-semibold text-gray-600">Durum</th>
+                                    <th class="px-6 py-4 text-left text-sm font-semibold text-gray-600">İşlemler</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="table-row border-t border-gray-200">
+                                    <td class="px-6 py-4">
+                                        <div class="flex items-center">
+                                            <div class="w-10 h-10 bg-gradient-to-r from-green-400 to-blue-500 rounded-lg flex items-center justify-center mr-3">
+                                                <span class="text-white">🏰</span>
+                                            </div>
+                                            <div>
+                                                <p class="font-medium text-brand-dark">Klasik Balkan Turu</p>
+                                                <p class="text-sm text-gray-600">7 Gece 8 Gün</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 text-gray-600">Balkan Turları</td>
+                                    <td class="px-6 py-4 font-semibold text-brand-blue">€450</td>
+                                    <td class="px-6 py-4">
+                                        <span class="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">Aktif</span>
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <div class="flex space-x-2">
+                                            <button class="text-blue-600 hover:text-blue-800">✏️</button>
+                                            <button class="text-red-600 hover:text-red-800">🗑️</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Reservations Section -->
+                <div id="adminReservations" class="content-section">
+                    <div class="mb-8">
+                        <h2 class="text-3xl font-bold text-brand-dark mb-2">Rezervasyonlar</h2>
+                        <p class="text-gray-600">Tüm rezervasyonları yönetin</p>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                        <table class="w-full">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-4 text-left text-sm font-semibold text-gray-600">Rezervasyon No</th>
+                                    <th class="px-6 py-4 text-left text-sm font-semibold text-gray-600">Müşteri</th>
+                                    <th class="px-6 py-4 text-left text-sm font-semibold text-gray-600">Tur</th>
+                                    <th class="px-6 py-4 text-left text-sm font-semibold text-gray-600">Tutar</th>
+                                    <th class="px-6 py-4 text-left text-sm font-semibold text-gray-600">Durum</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="table-row border-t border-gray-200">
+                                    <td class="px-6 py-4 font-medium text-brand-dark">GS-2024-001234</td>
+                                    <td class="px-6 py-4">
+                                        <div>
+                                            <p class="font-medium text-brand-dark">Ahmet Yılmaz</p>
+                                            <p class="text-sm text-gray-600">ahmet@email.com</p>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 text-gray-600">Klasik Balkan Turu</td>
+                                    <td class="px-6 py-4 font-semibold text-brand-blue">€450</td>
+                                    <td class="px-6 py-4">
+                                        <span class="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">Onaylandı</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Customers Section -->
+                <div id="adminCustomers" class="content-section">
+                    <div class="mb-8">
+                        <h2 class="text-3xl font-bold text-brand-dark mb-2">Müşteriler</h2>
+                        <p class="text-gray-600">Müşteri bilgilerini yönetin</p>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                        <table class="w-full">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-4 text-left text-sm font-semibold text-gray-600">Müşteri</th>
+                                    <th class="px-6 py-4 text-left text-sm font-semibold text-gray-600">İletişim</th>
+                                    <th class="px-6 py-4 text-left text-sm font-semibold text-gray-600">Rezervasyon</th>
+                                    <th class="px-6 py-4 text-left text-sm font-semibold text-gray-600">Harcama</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="table-row border-t border-gray-200">
+                                    <td class="px-6 py-4">
+                                        <div class="flex items-center">
+                                            <div class="w-10 h-10 bg-brand-blue rounded-full flex items-center justify-center text-white font-semibold mr-3">
+                                                AY
+                                            </div>
+                                            <div>
+                                                <p class="font-medium text-brand-dark">Ahmet Yılmaz</p>
+                                                <p class="text-sm text-gray-600">VIP Müşteri</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <div>
+                                            <p class="text-gray-600">ahmet@email.com</p>
+                                            <p class="text-sm text-gray-500">+90 532 123 4567</p>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'97317a126799e33f',t:'MTc1NTg1NjM0MS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script>
